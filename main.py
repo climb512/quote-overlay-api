@@ -21,19 +21,44 @@ def overlay_text():
         response.raise_for_status()
         bg = Image.open(BytesIO(response.content)).convert("RGBA")
 
-        # Use default font
-        font = ImageFont.load_default()
         draw = ImageDraw.Draw(bg)
 
-        # Centered text
-        #  text_width, text_height = draw.textsize(quote, font)
-        bbox = draw.textbbox((0, 0), quote, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
+# Set max width for text (e.g. 90% of image width)
+max_width = int(bg.width * 0.9)
+font = ImageFont.truetype("DejaVuSans.ttf", size=48)
 
-        x = (bg.width - text_width) / 2
-        y = (bg.height - text_height) / 2
-        draw.text((x, y), quote, font=font, fill="black")
+# Wrap the quote into multiple lines
+words = quote.split()
+lines = []
+current_line = ""
+
+for word in words:
+    test_line = current_line + " " + word if current_line else word
+    bbox = draw.textbbox((0, 0), test_line, font=font)
+    line_width = bbox[2] - bbox[0]
+    if line_width <= max_width:
+        current_line = test_line
+    else:
+        lines.append(current_line)
+        current_line = word
+    if current_line:
+        lines.append(current_line)
+
+    # Calculate total text block height
+    line_height = font.getbbox("A")[3] - font.getbbox("A")[1] + 10  # 10px spacing
+    text_block_height = len(lines) * line_height
+
+    # Vertical start position
+    y = (bg.height - text_block_height) // 2
+
+    # Draw each line centered
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        line_width = bbox[2] - bbox[0]
+        x = (bg.width - line_width) // 2
+        draw.text((x, y), line, font=font, fill="black")
+        y += line_height
+
 
         # Output
         output = BytesIO()
