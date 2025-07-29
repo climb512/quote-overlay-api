@@ -22,40 +22,51 @@ def overlay_text():
         bg = Image.open(BytesIO(response.content)).convert("RGBA")
 
         draw = ImageDraw.Draw(bg)
-        font = ImageFont.truetype("DejaVuSans.ttf", size=48)
 
-        # Set max width for text (e.g. 90% of image width)
-        max_width = int(bg.width * 0.9)
+        # Load a better font (adjust path and size)
+        font = ImageFont.truetype("DejaVuSans.ttf", size=60)
 
-        # Wrap the quote into multiple lines
+        # Wrap text manually
+        max_width = int(bg.width * 0.85)
         words = quote.split()
         lines = []
-        current_line = ""
+        line = ""
 
         for word in words:
-            test_line = current_line + " " + word if current_line else word
+            test_line = line + " " + word if line else word
             bbox = draw.textbbox((0, 0), test_line, font=font)
-            line_width = bbox[2] - bbox[0]
-            if line_width <= max_width:
-                current_line = test_line
+            if bbox[2] - bbox[0] <= max_width:
+                line = test_line
             else:
-                lines.append(current_line)
-                current_line = word
-        if current_line:
-            lines.append(current_line)
+                lines.append(line)
+                line = word
+        if line:
+            lines.append(line)
 
-        # Calculate total text block height
-        line_height = font.getbbox("A")[3] - font.getbbox("A")[1] + 10  # 10px spacing
+        # Calculate text block height
+        line_height = font.getbbox("A")[3] - font.getbbox("A")[1] + 10
         text_block_height = len(lines) * line_height
 
-        # Vertical start position
+        # Vertical centering
         y = (bg.height - text_block_height) // 2
 
-        # Draw each line centered
+        # Optional: draw a semi-transparent rectangle behind text
+        overlay = Image.new("RGBA", bg.size, (0,0,0,0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        margin = 40
+        rect_top = y - 20
+        rect_bottom = y + text_block_height + 20
+        overlay_draw.rectangle(
+            [(margin, rect_top), (bg.width - margin, rect_bottom)],
+            fill=(255, 255, 255, 180)  # Light white box with transparency
+        )
+        bg = Image.alpha_composite(bg, overlay)
+
+        # ✅ Properly indented draw loop
         for line in lines:
             bbox = draw.textbbox((0, 0), line, font=font)
-            line_width = bbox[2] - bbox[0]
-            x = (bg.width - line_width) // 2
+            text_width = bbox[2] - bbox[0]
+            x = (bg.width - text_width) // 2
             draw.text((x, y), line, font=font, fill="black")
             y += line_height
 
